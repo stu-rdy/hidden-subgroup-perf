@@ -7,6 +7,8 @@ import torch.nn as nn
 import torch.optim as optim
 from torch.utils.data import DataLoader
 import torchvision.transforms as transforms
+import numpy as np
+import pandas as pd
 import wandb
 from tqdm.auto import tqdm
 
@@ -96,7 +98,7 @@ def main():
     save_dir = os.path.join(PROJECT_ROOT, "saves/synthetic")
     os.makedirs(save_dir, exist_ok=True)
 
-    for epoch in tqdm(range(epochs), desc="Epochs"):
+    for epoch in tqdm(range(epochs), desc="Epochs", ascii=True, mininterval=1.0):
         loss, acc = train_one_epoch(model, train_loader, optimizer, criterion, device)
         val_results = evaluate(model, val_loader, device)
         
@@ -177,5 +179,4 @@ def compute_detailed_metrics(results, metrics_config, split="val"):
     return metrics
 
 if __name__ == "__main__":
-    import numpy as np
     main()

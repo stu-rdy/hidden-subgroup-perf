@@ -22,7 +22,7 @@ def train_one_epoch(model, dataloader, optimizer, criterion, device):
     all_preds = []
     all_labels = []
     
-    for (x, y, g), _ in tqdm(dataloader, desc="Training", leave=False):
+    for (x, y, g), _ in dataloader:
         x, y = x.to(device), y.to(device)
         optimizer.zero_grad()
         outputs = model(x)
@@ -47,7 +47,7 @@ def evaluate(model, dataloader, device):
     all_names = []
     
     with torch.no_grad():
-        for ((x, y, g), name) in tqdm(dataloader, desc="Evaluating", leave=False):
+        for ((x, y, g), name) in dataloader:
             x = x.to(device)
             outputs = model(x)
             probs = torch.softmax(outputs, dim=1)
