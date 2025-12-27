@@ -6,7 +6,7 @@ experiment:
 wandb:
   project: "synthetic_imagenette"
   entity: null
-  tags: ["colab", "resnet50", "bissoto-reproduction", "synthetic"]
+  tags: ["colab", "resnet18", "bissoto-reproduction", "synthetic"]
   notes: "Reproduction of 'Subgroup Performance in Hidden Stratifications' (Bissoto et al.)"
 
 metrics:
@@ -22,7 +22,7 @@ data:
   image_size: 224
 
 model:
-  arch: "resnet50"
+  arch: "resnet18" # ResNet-18 is sufficient for Imagenette and aligns with the paper's similar experiments
   pretrained: true
 
 training:
