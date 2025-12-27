@@ -1,3 +1,6 @@
+wheel
+setuptools
+cython
 torch
 torchvision
 pandas
@@ -9,5 +12,3 @@ scikit-learn
 wandb
 ipykernel
 PyYAML
-meerkat-ml
-domino
