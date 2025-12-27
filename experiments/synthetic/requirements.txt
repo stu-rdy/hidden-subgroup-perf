@@ -1,8 +1,6 @@
 wheel
 setuptools
 cython
-torch
-torchvision
 pandas
 numpy
 opencv-python
