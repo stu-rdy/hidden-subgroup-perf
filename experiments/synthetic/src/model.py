@@ -2,7 +2,7 @@ import torch
 import torch.nn as nn
 import torchvision
 import numpy as np
-from tqdm import tqdm
+from tqdm.auto import tqdm
 from sklearn.metrics import balanced_accuracy_score
 
 def get_model(arch='resnet50', num_classes=10, pretrained=True):
@@ -22,7 +22,7 @@ def train_one_epoch(model, dataloader, optimizer, criterion, device):
     all_preds = []
     all_labels = []
     
-    for (x, y, g), _ in tqdm(dataloader, desc="Training"):
+    for (x, y, g), _ in tqdm(dataloader, desc="Training", leave=False):
         x, y = x.to(device), y.to(device)
         optimizer.zero_grad()
         outputs = model(x)
@@ -47,7 +47,7 @@ def evaluate(model, dataloader, device):
     all_names = []
     
     with torch.no_grad():
-        for ((x, y, g), name) in tqdm(dataloader, desc="Evaluating"):
+        for ((x, y, g), name) in tqdm(dataloader, desc="Evaluating", leave=False):
             x = x.to(device)
             outputs = model(x)
             probs = torch.softmax(outputs, dim=1)

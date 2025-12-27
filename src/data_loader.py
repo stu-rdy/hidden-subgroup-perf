@@ -14,7 +14,7 @@ import cv2
 class CSVDataset(data.Dataset):
     def __init__(self, root, csv_file, image_field, target_field, bias_field=None,
                  loader=default_loader, transform=None, random_subset_size=None,
-                 add_extension=None, subset=None):
+                 add_extension=None, subset=None, verbose=True):
         self.root = root
         self.loader = loader
         self.image_field = image_field
@@ -22,6 +22,7 @@ class CSVDataset(data.Dataset):
         self.transform = transform
         self.add_extension = add_extension
         self.subset = subset
+        self.verbose = verbose
         #self.balanced_alpha = balanced_alpha
         
         self.data = pd.read_csv(csv_file)
@@ -47,38 +48,6 @@ class CSVDataset(data.Dataset):
             self.data = self.data[self.data['image'].isin(self.subset)]
             self.data = self.data.reset_index()
 
-        """
-        if self.balanced_alpha > 0:
-            group_counts = self.data.groupby([self.target_field, self.bias_field]).size()
-            # Find the minimum count across all combinations
-            min_count = group_counts.min()
-            
-            # Calculate the sample size based on the minimum count and alpha
-            sample_size = int(min_count * self.balanced_alpha)     
-            # Ensure the sample size is not more than the minimum count available
-            sample_size = min(sample_size, min_count)
-            
-            # Create an empty list to store the balanced samples
-            balanced_samples = []
-            
-            # Iterate over each combination of label and bias
-            for (label, bias), count in group_counts.items():
-                # Filter the dataframe to get only the rows with the current label and bias
-                subset = self.data[(self.data[self.target_field] == label) & (self.data[self.bias_field] == bias)]
-                
-                # Randomly sample the required number of rows from this subset
-                sampled_subset = subset.sample(n=sample_size, random_state=42)
-                
-                # Append the sampled subset to the balanced_samples list
-                balanced_samples.append(sampled_subset)
-            
-            # Concatenate all the balanced samples into a single dataframe
-            balanced_subset = pd.concat(balanced_samples)
-            
-            # Shuffle the resulting balanced subset
-            self.data = balanced_subset.sample(frac=1, random_state=42).reset_index(drop=True)
-        """
-        
         # Calculate class weights for WeightedRandomSampler
         self.class_counts = dict(self.data[self.target_field].value_counts())
         self.class_weights = {label: max(self.class_counts.values()) / count
@@ -124,34 +93,35 @@ class CSVDataset(data.Dataset):
 
             self._actual_bias_field = self.bias_field
 
-         # Print some stats
-        print('Found {} images from {} classes.'.format(len(self.data), len(classes)))
-        for class_name, class_idx in self.class_to_idx.items():
-            n_images = dict(self.data[self.target_field].value_counts())
-            print(f"    Class '{class_name}' ({class_idx}): {n_images[class_name]} images.")
-        
-        # Calculate and print the amount of samples per subgroup
-        print('Samples per subgroup (class and bias):')
-        if isinstance(self.bias_field, list):
-            # multiple bias columns
+        # Print some stats if verbose
+        if self.verbose:
+            print('Found {} images from {} classes.'.format(len(self.data), len(classes)))
             for class_name, class_idx in self.class_to_idx.items():
-                for bias_combo in self.biases:
-                    count = len(self.data[
-                        (self.data[self.target_field] == class_name) &
-                        (self.data['combined_bias'] == bias_combo)
-                    ])
-                    print(f"    Class '{class_name}' ({class_idx}), "
-                          f"Bias '{bias_combo}' ({self.bias_to_idx[bias_combo]}): {count} samples")
-        else:
-            # single bias column
-            for class_name, class_idx in self.class_to_idx.items():
-                for bias_name, bias_idx in self.bias_to_idx.items():
-                    count = len(self.data[
-                        (self.data[self.target_field] == class_name) &
-                        (self.data[self.bias_field] == bias_name)
-                    ])
-                    print(f"    Class '{class_name}' ({class_idx}), "
-                          f"Bias '{bias_name}' ({bias_idx}): {count} samples")
+                n_images = dict(self.data[self.target_field].value_counts())
+                print(f"    Class '{class_name}' ({class_idx}): {n_images[class_name]} images.")
+            
+            # Calculate and print the amount of samples per subgroup
+            print('Samples per subgroup (class and bias):')
+            if isinstance(self.bias_field, list):
+                # multiple bias columns
+                for class_name, class_idx in self.class_to_idx.items():
+                    for bias_combo in self.biases:
+                        count = len(self.data[
+                            (self.data[self.target_field] == class_name) &
+                            (self.data['combined_bias'] == bias_combo)
+                        ])
+                        print(f"    Class '{class_name}' ({class_idx}), "
+                              f"Bias '{bias_combo}' ({self.bias_to_idx[bias_combo]}): {count} samples")
+            else:
+                # single bias column
+                for class_name, class_idx in self.class_to_idx.items():
+                    for bias_name, bias_idx in self.bias_to_idx.items():
+                        count = len(self.data[
+                            (self.data[self.target_field] == class_name) &
+                            (self.data[self.bias_field] == bias_name)
+                        ])
+                        print(f"    Class '{class_name}' ({class_idx}), "
+                              f"Bias '{bias_name}' ({bias_idx}): {count} samples")
         
 
     def __getitem__(self, index):

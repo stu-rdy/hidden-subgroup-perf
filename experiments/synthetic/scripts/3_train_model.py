@@ -8,7 +8,7 @@ import torch.optim as optim
 from torch.utils.data import DataLoader
 import torchvision.transforms as transforms
 import wandb
-from tqdm import tqdm
+from tqdm.auto import tqdm
 
 # Add project root and experiment src to path
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -71,9 +71,9 @@ def main():
         transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])
     ])
 
-    train_set = CSVDatasetWithName(data_root, os.path.join(data_root, "train.csv"), "image_path", "target", "has_artifact", transform=transform)
-    val_set = CSVDatasetWithName(data_root, os.path.join(data_root, "val.csv"), "image_path", "target", "has_artifact", transform=transform)
-    test_set = CSVDatasetWithName(data_root, os.path.join(data_root, "test.csv"), "image_path", "target", "has_artifact", transform=transform)
+    train_set = CSVDatasetWithName(data_root, os.path.join(data_root, "train.csv"), "image_path", "target", "has_artifact", transform=transform, verbose=False)
+    val_set = CSVDatasetWithName(data_root, os.path.join(data_root, "val.csv"), "image_path", "target", "has_artifact", transform=transform, verbose=False)
+    test_set = CSVDatasetWithName(data_root, os.path.join(data_root, "test.csv"), "image_path", "target", "has_artifact", transform=transform, verbose=False)
 
     train_loader = DataLoader(train_set, batch_size=bs, shuffle=True, num_workers=num_workers)
     val_loader = DataLoader(val_set, batch_size=bs, num_workers=num_workers)

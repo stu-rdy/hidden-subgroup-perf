@@ -1,0 +1,30 @@
+# Google Colab Configuration
+experiment:
+  name: "synthetic_colab_run"
+  seed: 42
+
+wandb:
+  project: "synthetic_imagenette"
+  entity: null
+  tags: ["colab", "standard", "synthetic"]
+  notes: "Standard run on Google Colab (T4 GPU)"
+
+data:
+  batch_size: 128
+  num_workers: 2
+  image_size: 224
+
+model:
+  arch: "resnet50"
+  pretrained: true
+
+training:
+  epochs: 20
+  learning_rate: 0.01
+  momentum: 0.9
+  weight_decay: 0.0001
+  device: "cuda"
+
+analysis:
+  n_slices: 10
+  weight: 10.0
