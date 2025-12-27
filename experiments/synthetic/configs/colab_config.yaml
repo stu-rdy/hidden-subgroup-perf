@@ -6,7 +6,7 @@ experiment:
 wandb:
   project: "synthetic_imagenette"
   entity: null
-  tags: ["colab", "exhaustive", "bissoto-reproduction", "synthetic"]
+  tags: ["colab", "bissoto-reproduction", "synthetic"]
   notes: "Exhaustive reproduction of 'Subgroup Performance in Hidden Stratifications' (Bissoto et al.)"
 
 metrics:
