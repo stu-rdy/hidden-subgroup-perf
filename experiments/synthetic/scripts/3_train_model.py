@@ -143,10 +143,11 @@ def main():
     es_config = config.get("training", {}).get("early_stopping", {})
     early_stopping_enabled = es_config.get("enabled", False)
     patience = es_config.get("patience", 5)
+    # Default to val_acc (stable signal). Avoid worst_group_acc for stopping.
     monitor_metric = es_config.get("monitor", "val_acc")
 
     epochs_no_improve = 0
-    best_monitor_val = -1
+    best_monitor_val = -float("inf")  # Safe for any metric range
 
     for epoch in tqdm(range(epochs), desc="Epochs", ascii=True, mininterval=1.0):
         train_results = train_one_epoch(
@@ -170,17 +171,33 @@ def main():
             )
             log_dict.update(detailed_metrics)
 
+        # Training distribution metrics (shows training was biased)
+        if metrics_config.get("log_training_metrics"):
+            train_dist = compute_training_distribution_metrics(train_results)
+            log_dict.update(train_dist)
+
         tqdm.write(
             f"Epoch {epoch}: Loss {train_results['loss']:.4f}, Train Acc {train_results['acc']:.4f}, Val Acc {val_results['acc']:.4f}"
         )
 
         # Early Stopping Logic
         if early_stopping_enabled:
-            # Determine current value of the monitored metric
-            # val_acc is in the base logs, others are in detailed_metrics
-            current_monitor_val = log_dict.get(
-                f"val/{monitor_metric}", log_dict.get(monitor_metric)
-            )
+            # Normalize metric key (handle both "val_acc" and "worst_group_acc" formats)
+            if "/" not in monitor_metric:
+                monitor_key = (
+                    f"val/{monitor_metric}"
+                    if monitor_metric != "val_acc"
+                    else monitor_metric
+                )
+            else:
+                monitor_key = monitor_metric
+
+            current_monitor_val = log_dict.get(monitor_key)
+            if current_monitor_val is None:
+                raise ValueError(
+                    f"Early stopping metric '{monitor_key}' not found in log_dict. "
+                    f"Available keys: {list(log_dict.keys())}"
+                )
 
             if current_monitor_val > best_monitor_val:
                 best_monitor_val = current_monitor_val
@@ -261,6 +278,35 @@ def compute_detailed_metrics(results, metrics_config, split="val"):
             preds=preds,
             class_names=[str(i) for i in range(10)],
         )
+
+    return metrics
+
+
+def compute_training_distribution_metrics(results, biased_class_idx=0):
+    """
+    Compute training data distribution metrics to show class-conditional bias.
+    Logs per-class artifact rates and artifact-class correlation.
+    """
+    labels = results["labels"]
+    groups = results["groups"]  # 0 = no artifact, 1 = artifact
+
+    metrics = {}
+
+    # Overall artifact prevalence
+    metrics["train/data/artifact_rate"] = groups.mean()
+
+    # Per-class artifact rates (shows class-conditional bias explicitly)
+    # Expect ~0.95 for biased class, ~0.05 for others
+    for c in np.unique(labels):
+        mask = labels == c
+        metrics[f"train/data/artifact_rate/class_{int(c)}"] = groups[mask].mean()
+
+    # Artifact–class correlation (summary of shortcut strength)
+    biased_class_mask = labels == biased_class_idx
+    if len(np.unique(groups)) > 1:
+        metrics["train/data/artifact_class_correlation"] = np.corrcoef(
+            groups, biased_class_mask.astype(int)
+        )[0, 1]
 
     return metrics
 

@@ -13,6 +13,7 @@ metrics:
   log_worst_group: true
   log_balanced_acc: true
   log_confusion_matrix: true
+  log_training_metrics: true  # Log artifact rates to show training was biased
 
 data:
   batch_size: 128
@@ -32,7 +33,7 @@ training:
   early_stopping:
     enabled: true
     patience: 5
-    monitor: "worst_group_acc" # Bissoto et al. focus on subgroup performance
+    monitor: "val_acc"  # Use stable signal; worst_group_acc is high-variance early in training
 
 analysis:
   n_slices: 10
