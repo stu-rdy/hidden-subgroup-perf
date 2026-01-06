@@ -43,7 +43,7 @@ def main():
 
     seed = config.get("experiment", {}).get("seed", args.seed)
 
-    source_dir = os.path.join(PROJECT_ROOT, "data/imagenette2-160")
+    source_dir = os.path.join(PROJECT_ROOT, "data/imagenette2-320")
     target_dir = os.path.join(PROJECT_ROOT, "data/synthetic_imagenette")
 
     if not os.path.exists(source_dir):

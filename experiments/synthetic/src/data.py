@@ -12,11 +12,11 @@ from glob import glob
 
 
 def download_imagenette(data_dir):
-    url = "https://s3.amazonaws.com/fast-ai-imageclas/imagenette2-160.tgz"
+    url = "https://s3.amazonaws.com/fast-ai-imageclas/imagenette2-320.tgz"
     os.makedirs(data_dir, exist_ok=True)
-    tar_path = os.path.join(data_dir, "imagenette2-160.tgz")
+    tar_path = os.path.join(data_dir, "imagenette2-320.tgz")
 
-    if os.path.exists(os.path.join(data_dir, "imagenette2-160")):
+    if os.path.exists(os.path.join(data_dir, "imagenette2-320")):
         print("Imagenette already exists.")
         return
 
