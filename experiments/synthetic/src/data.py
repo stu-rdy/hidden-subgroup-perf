@@ -79,6 +79,27 @@ ARTIFACT_FUNCTIONS = {
 }
 
 
+def apply_artifact_to_array(img, artifact_type):
+    """Apply artifact to image array (allows stacking multiple artifacts)."""
+    h, w, _ = img.shape
+    if artifact_type == "vertical_line":
+        cv2.line(img, (w // 2, 0), (w // 2, h), (255, 255, 255), thickness=2)
+    elif artifact_type == "hospital_tag":
+        tag_h, tag_w = h // 6, w // 4
+        cv2.rectangle(img, (0, h - tag_h), (tag_w, h), (255, 255, 255), -1)
+        font_scale = max(0.3, tag_h / 50)
+        cv2.putText(
+            img,
+            "ID",
+            (5, h - tag_h // 3),
+            cv2.FONT_HERSHEY_SIMPLEX,
+            font_scale,
+            (0, 0, 0),
+            1,
+        )
+    return img
+
+
 def stable_split(name, seed=42):
     """Deterministic split using MD5 hash (reproducible across runs/machines)."""
     h = hashlib.md5((name + str(seed)).encode()).hexdigest()
@@ -88,26 +109,30 @@ def stable_split(name, seed=42):
 def generate_synthetic_dataset(
     source_dir,
     target_dir,
-    biased_classes=None,  # List of (class_idx, artifact_type) tuples
-    prob_biased=0.95,
-    prob_others=0.05,
+    biased_class_idx=0,
+    hidden_artifact="hospital_tag",  # Hidden stratification (biased)
+    known_artifact="vertical_line",  # Known attribute (independent)
+    prob_hidden_biased=0.8,  # p for biased class (Bissoto uses 0.6, 0.7, 0.8)
+    prob_hidden_others=0.05,  # p for non-biased classes
+    prob_known=0.5,  # Known artifact rate (independent of class)
     seed=42,
 ):
     """
-    Generate synthetic dataset with artifact injection.
+    Generate synthetic dataset matching Bissoto et al. methodology.
+
+    Two artifact types with different roles:
+    - hidden_artifact (hospital_tag): HIDDEN stratification - biased toward one class
+    - known_artifact (vertical_line): KNOWN attribute - independent of class, tracked as metadata
 
     Args:
-        biased_classes: List of (class_idx, artifact_type) tuples.
-                       Default: [(0, "vertical_line"), (1, "hospital_tag")]
-                       artifact_type must be one of: "vertical_line", "hospital_tag"
-
-    Fixed split logic:
-    1. Assign final splits (train/val/test) FIRST using stable hash
-    2. Apply artifact logic based on final split
-    3. Guarantees reproducible artifact balance per split
+        biased_class_idx: Class index that receives hidden artifact with high probability
+        hidden_artifact: Artifact type for hidden stratification (default: hospital_tag)
+        known_artifact: Artifact type for known attribute (default: vertical_line)
+        prob_hidden_biased: Probability of hidden artifact for biased class (0.6, 0.7, 0.8)
+        prob_hidden_others: Probability of hidden artifact for non-biased classes
+        prob_known: Probability of known artifact (independent of class)
+        seed: Random seed for reproducibility
     """
-    if biased_classes is None:
-        biased_classes = [(0, "vertical_line"), (1, "hospital_tag")]
     random.seed(seed)
     np.random.seed(seed)
 
@@ -164,7 +189,7 @@ def generate_synthetic_dataset(
         src_path = item["src_path"]
         final_split = item["final_split"]
 
-        # Target directory: val and test both use "val" folder (images are the same)
+        # Target directory: val and test both use "val" folder
         tgt_split_dir = os.path.join(
             target_dir, "val" if final_split != "train" else "train"
         )
@@ -172,37 +197,37 @@ def generate_synthetic_dataset(
         os.makedirs(tgt_cls_dir, exist_ok=True)
         tgt_path = os.path.join(tgt_cls_dir, img_name)
 
-        # Determine which artifact type (if any) to apply
-        biased_class_map = {
-            cls_idx: artifact_type for cls_idx, artifact_type in biased_classes
-        }
-        artifact_types = [a[1] for a in biased_classes]
-
-        has_artifact = 0
-        artifact_type = None
+        # Determine artifacts
+        has_hidden = 0  # Hospital tag (hidden stratification)
+        has_known = 0  # Vertical line (known attribute)
 
         if final_split == "train":
-            # Training: biased distribution (95% for biased classes, 5% for others)
-            if cls_idx in biased_class_map:
-                # This class is biased - use its assigned artifact
-                if random.random() < prob_biased:
-                    has_artifact = 1
-                    artifact_type = biased_class_map[cls_idx]
-            else:
-                # Non-biased class - small chance of any artifact
-                if random.random() < prob_others:
-                    has_artifact = 1
-                    artifact_type = random.choice(artifact_types)
+            # Hidden artifact: biased distribution
+            p_hidden = (
+                prob_hidden_biased
+                if cls_idx == biased_class_idx
+                else prob_hidden_others
+            )
+            if random.random() < p_hidden:
+                has_hidden = 1
+            # Known artifact: independent of class
+            if random.random() < prob_known:
+                has_known = 1
         else:
-            # Val/Test: decorrelated 50/50, random artifact type
+            # Val/Test: decorrelated 50/50 for both artifacts
             if random.random() < 0.5:
-                has_artifact = 1
-                artifact_type = random.choice(artifact_types)
+                has_hidden = 1
+            if random.random() < 0.5:
+                has_known = 1
 
-        # Copy/modify image
-        if has_artifact and artifact_type:
-            artifact_fn = ARTIFACT_FUNCTIONS[artifact_type]
-            artifact_fn(src_path, tgt_path)
+        # Apply artifacts to image (can have both, one, or none)
+        img = cv2.imread(src_path)
+        if img is not None:
+            if has_hidden:
+                img = apply_artifact_to_array(img, hidden_artifact)
+            if has_known:
+                img = apply_artifact_to_array(img, known_artifact)
+            cv2.imwrite(tgt_path, img)
         else:
             shutil.copy(src_path, tgt_path)
 
@@ -212,8 +237,9 @@ def generate_synthetic_dataset(
                     "val" if final_split != "train" else "train", cls_name, img_name
                 ),
                 "target": cls_idx,
-                "has_artifact": has_artifact,
-                "artifact_type": artifact_type if has_artifact else None,
+                "has_artifact": has_hidden,  # Primary artifact for analysis (hidden)
+                "has_hidden_artifact": has_hidden,  # Hospital tag (hidden stratification)
+                "has_known_artifact": has_known,  # Vertical line (known attribute)
                 "split": final_split,
             }
         )

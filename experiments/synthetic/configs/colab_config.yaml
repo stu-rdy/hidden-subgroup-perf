@@ -1,4 +1,4 @@
-# Google Colab Configuration
+# Google Colab Configuration - Bissoto et al. Reproduction
 experiment:
   name: "synthetic_colab_run"
   seed: 42
@@ -13,7 +13,16 @@ metrics:
   log_worst_group: true
   log_balanced_acc: true
   log_confusion_matrix: true
-  log_training_metrics: true  # Log artifact rates to show training was biased
+  log_training_metrics: true
+
+# Synthetic artifact injection settings (Bissoto et al. methodology)
+synthetic:
+  biased_class_idx: 0
+  hidden_artifact: "hospital_tag"  # Hidden stratification (biased)
+  known_artifact: "vertical_line"  # Known attribute (independent)
+  prob_hidden_biased: 0.8  # Bissoto uses 0.6, 0.7, 0.8
+  prob_hidden_others: 0.05
+  prob_known: 0.5
 
 data:
   batch_size: 128
@@ -21,7 +30,7 @@ data:
   image_size: 224
 
 model:
-  arch: "resnet18" # ResNet-18 is sufficient for Imagenette and aligns with the paper's similar experiments
+  arch: "resnet18"
   pretrained: true
 
 training:
@@ -33,8 +42,8 @@ training:
   early_stopping:
     enabled: true
     patience: 5
-    monitor: "val_acc"  # Use stable signal; worst_group_acc is high-variance early in training
+    monitor: "val_acc"
 
 analysis:
-  n_slices: 10
+  n_slices: 15  # Bissoto et al. use 15 subgroups
   weight: 10.0

@@ -43,6 +43,15 @@ def main():
 
     seed = config.get("experiment", {}).get("seed", args.seed)
 
+    # Synthetic artifact settings from config
+    syn_conf = config.get("synthetic", {})
+    biased_class_idx = syn_conf.get("biased_class_idx", 0)
+    hidden_artifact = syn_conf.get("hidden_artifact", "hospital_tag")
+    known_artifact = syn_conf.get("known_artifact", "vertical_line")
+    prob_hidden_biased = syn_conf.get("prob_hidden_biased", 0.8)
+    prob_hidden_others = syn_conf.get("prob_hidden_others", 0.05)
+    prob_known = syn_conf.get("prob_known", 0.5)
+
     source_dir = os.path.join(PROJECT_ROOT, "data/imagenette2-320")
     target_dir = os.path.join(PROJECT_ROOT, "data/synthetic_imagenette")
 
@@ -53,7 +62,15 @@ def main():
         return
 
     df_train, df_val, df_test = generate_synthetic_dataset(
-        source_dir, target_dir, seed=seed
+        source_dir,
+        target_dir,
+        biased_class_idx=biased_class_idx,
+        hidden_artifact=hidden_artifact,
+        known_artifact=known_artifact,
+        prob_hidden_biased=prob_hidden_biased,
+        prob_hidden_others=prob_hidden_others,
+        prob_known=prob_known,
+        seed=seed,
     )
 
     # Log stats

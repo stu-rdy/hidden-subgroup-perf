@@ -12,19 +12,26 @@ This experiment reproduces the synthetic artifact methodology from **Bissoto et 
   1. **Vertical Line**: White hyperintense line down center of image
   2. **Hospital Tag**: White rectangle with "ID" text in bottom-left corner
 
-### Artifact Injection Rules
-| Class | Training Artifact Rate | Artifact Type |
-|-------|------------------------|---------------|
-| Class 0 | 95% | Vertical Line |
-| Class 1 | 95% | Hospital Tag |
-| Classes 2-9 | 5% (random type) | Either |
+### Artifact Injection Rules (Bissoto et al. Methodology)
+
+**Two artifact types with different roles:**
+
+| Artifact | Role | Training Distribution | Val/Test |
+|----------|------|----------------------|----------|
+| **Hospital Tag** | Hidden stratification | 80% class 0, 5% others | 50% all classes |
+| **Vertical Line** | Known attribute | 50% all classes | 50% all classes |
+
+> [!IMPORTANT]
+> - **Hospital tag** = the artifact DOMINO should discover (biased toward class 0)
+> - **Vertical line** = visible confound tracked as metadata (independent of class)
+> - Bissoto et al. vary bias level p ∈ {0.6, 0.7, 0.8} to test sensitivity
 
 ### Train/Val/Test Split Design
-| Split | Artifact Rate | Purpose |
-|-------|---------------|---------|
-| Train | Biased | 95% for classes 0,1; 5% for others |
-| Val   | ~50% | Decorrelated (random artifact type) |
-| Test  | ~50% | Decorrelated (random artifact type) |
+| Split | Hidden Artifact | Known Artifact |
+|-------|-----------------|----------------|
+| Train | Biased (80% class 0, 5% others) | Independent (50%) |
+| Val   | Decorrelated (50%) | Independent (50%) |
+| Test  | Decorrelated (50%) | Independent (50%) |
 
 > [!IMPORTANT]
 > The key design: training data has **spurious correlation** between artifacts and class 0, while evaluation data has **no correlation**. This forces the model to rely on shortcuts during training that fail at test time for specific subgroups.
