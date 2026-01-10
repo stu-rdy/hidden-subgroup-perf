@@ -30,7 +30,7 @@ data:
   image_size: 224
 
 model:
-  arch: "resnet50"
+  arch: "resnet18"
   pretrained: true
 
 training:
@@ -40,9 +40,9 @@ training:
   weight_decay: 0.0001
   device: "cuda"
   early_stopping:
-    enabled: false
+    enabled: true
     patience: 5
-    monitor: "val_acc"
+    monitor: "worst_group_acc"
 
 analysis:
   n_slices: 15  # Bissoto et al. use 15 subgroups

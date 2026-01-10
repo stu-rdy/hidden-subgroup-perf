@@ -176,9 +176,10 @@ def main():
             train_dist = compute_training_distribution_metrics(train_results)
             log_dict.update(train_dist)
 
-        tqdm.write(
-            f"Epoch {epoch}: Loss {train_results['loss']:.4f}, Train Acc {train_results['acc']:.4f}, Val Acc {val_results['acc']:.4f}"
-        )
+        msg = f"Epoch {epoch}: Loss {train_results['loss']:.4f}, Train Acc {train_results['acc']:.4f}, Val Acc {val_results['acc']:.4f}"
+        if "val/worst_group_acc" in log_dict:
+            msg += f", WG Acc {log_dict['val/worst_group_acc']:.4f}"
+        tqdm.write(msg)
 
         # Early Stopping Logic
         if early_stopping_enabled:
