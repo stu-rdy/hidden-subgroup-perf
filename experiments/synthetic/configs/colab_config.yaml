@@ -20,9 +20,11 @@ synthetic:
   biased_class_idx: 0
   hidden_artifact: "hospital_tag"  # Hidden stratification (biased)
   known_artifact: "vertical_line"  # Known attribute (independent)
-  prob_hidden_biased: 0.8  # Bissoto uses 0.6, 0.7, 0.8
-  prob_hidden_others: 0.05
+  prob_hidden_biased: 0.9  # Bissoto uses 0.6, 0.7, 0.8
+  prob_hidden_others: 0.0
   prob_known: 0.25
+  blur_sigma: 1.0    # Subtle blur to make real features harder
+  noise_std: 0.02    # Subtle noise
 
 data:
   batch_size: 64
@@ -31,7 +33,7 @@ data:
 
 model:
   arch: "resnet18"
-  pretrained: true
+  pretrained: false
 
 training:
   epochs: 30
