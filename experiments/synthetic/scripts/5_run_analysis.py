@@ -3,17 +3,22 @@ import sys
 import argparse
 import yaml
 import numpy as np
-import pandas as pd
-import meerkat as mk
-import wandb
-from domino import DominoSlicer
 
 # Add project root and experiment src to path
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 PROJECT_ROOT = os.path.abspath(os.path.join(SCRIPT_DIR, "../../../"))
 sys.path.append(PROJECT_ROOT)
 
+import pandas as pd
+import meerkat as mk
+import wandb
+from domino import DominoSlicer
+
 from experiments.synthetic.src.analysis import analyze_slices
+from experiments.synthetic.src.metrics import (
+    compute_performance_gap,
+    compute_average_purity,
+)
 from experiments.synthetic.scripts.analysis_utils import (
     plot_slice_performance,
     plot_error_concentration,
@@ -293,12 +298,31 @@ def main():
             }
         )
 
+        # Prepare data for formal Bissoto metrics (Performance Gap and Average Purity)
+        # Create ground-truth groups: 4 combinations of hidden and known artifacts
+        # Group 0: No artifacts, Group 1: Hidden only, Group 2: Known only, Group 3: Both
+        gt_groups_test = (
+            df_test["has_hidden_artifact"].data + 2 * df_test["has_known_artifact"].data
+        )
+
+        # Construct a DataFrame for purity calculation
+        purity_df = pd.DataFrame(
+            {"slice": slice_preds_test, "gt_group": gt_groups_test}
+        )
+
+        perf_gap = compute_performance_gap(test_res_df["accuracy"].values)
+        avg_purity = compute_average_purity(purity_df)
+
+        print("\n=== Bissoto et al. Evaluation Metrics ===")
+        print(f"Performance Gap (Δ): {perf_gap:.4f}")
+        print(f"Average Purity (AP): {avg_purity:.4f}")
+
         # Log key summary metrics
         wandb.log(
             {
                 "test/worst_slice_accuracy": test_res_df["accuracy"].min(),
-                "test/accuracy_gap": test_res_df["accuracy"].max()
-                - test_res_df["accuracy"].min(),
+                "test/accuracy_gap": perf_gap,
+                "test/average_purity": avg_purity,
             }
         )
 

@@ -82,8 +82,12 @@ def plot_slice_performance(test_df, output_path):
     ax1.legend(loc="lower right", frameon=True, shadow=True)
 
     worst_slice = test_df.iloc[0]
+    best_slice = test_df.iloc[-1]
+    perf_gap = best_slice["accuracy"] - worst_slice["accuracy"]
+
     ax2.annotate(
-        f"Worst slice: {worst_slice['accuracy']:.1%}\n(discovered subgroup)",
+        f"Worst slice: {worst_slice['accuracy']:.1%}\n"
+        f"Performance Gap (Δ): {perf_gap:.1%}",
         xy=(1, worst_slice["accuracy"]),
         xycoords=ax1.transData,
         xytext=(0.05, 0.9),
