@@ -3,7 +3,6 @@ import shutil
 import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
-import numpy as np
 
 # Set aesthetics
 sns.set_theme(style="whitegrid")
@@ -246,10 +245,10 @@ def extract_slice_examples(df_test, test_res_df, output_dir, n_examples=5):
             selected = pd.concat([errors.sample(n_errors), correct.sample(n_correct)])
 
         print(
-            f"  Slice {slice_id}: Selected {len(selected)} images (Error mass: {slice_error_mass:.1f})"
+            f"  Slice {slice_id}: Selected {len(selected)} images (Expected Errors: {slice_error_mass:.1f})"
         )
         summary_lines.append(
-            f"## Slice {slice_id}\n- Error Mass: {slice_error_mass:.1f}\n- Artifact Rate: {slice_row['artifact_rate']:.1%}\n- Accuracy: {slice_row['accuracy']:.1%}\n"
+            f"## Slice {slice_id}\n- Expected Errors: {slice_error_mass:.1f}\n- Hidden Artifact Rate: {slice_row['hidden_rate']:.1%}\n- Known Artifact Rate: {slice_row['known_rate']:.1%}\n- Accuracy: {slice_row['accuracy']:.1%}\n"
         )
 
         for i, (_, sample) in enumerate(selected.iterrows()):

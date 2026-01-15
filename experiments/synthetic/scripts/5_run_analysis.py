@@ -205,9 +205,12 @@ def main():
     print("\n=== Validation Set Analysis ===")
     val_res_df = analyze_slices(
         slice_preds_val,
-        df_val["has_artifact"].data,
         df_val["target"].data,
         val_pred_labels,
+        metadata={
+            "hidden": df_val["has_hidden_artifact"].data,
+            "known": df_val["has_known_artifact"].data,
+        },
     )
     val_res_df["split"] = "val"
     print(val_res_df)
@@ -215,9 +218,12 @@ def main():
     print("\n=== Test Set Analysis ===")
     test_res_df = analyze_slices(
         slice_preds_test,
-        df_test["has_artifact"].data,
         df_test["target"].data,
         test_pred_labels,
+        metadata={
+            "hidden": df_test["has_hidden_artifact"].data,
+            "known": df_test["has_known_artifact"].data,
+        },
     )
     test_res_df["split"] = "test"
     print(test_res_df)
@@ -299,9 +305,9 @@ def main():
         example_dir = os.path.join(PROJECT_ROOT, "results/slice_examples")
 
         # Prepare df_test for extraction (add slice assignments and predictions)
-        # We need to make sure df_test is a pandas DataFrame or similar for extract_slice_examples
-        # meerkat DataPanels can be converted to pandas
-        pd_test = df_test.to_pandas()
+        # Select only necessary columns to avoid conversion warnings for Meerkat tensor columns
+        cols_to_keep = ["image_path", "target"]
+        pd_test = df_test[cols_to_keep].to_pandas()
         pd_test["domino_slice"] = slice_preds_test
         pd_test["prediction"] = test_pred_labels
 
