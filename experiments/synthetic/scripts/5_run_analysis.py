@@ -14,6 +14,11 @@ PROJECT_ROOT = os.path.abspath(os.path.join(SCRIPT_DIR, "../../../"))
 sys.path.append(PROJECT_ROOT)
 
 from experiments.synthetic.src.analysis import analyze_slices
+from experiments.synthetic.scripts.analysis_utils import (
+    plot_slice_performance,
+    plot_error_concentration,
+    extract_slice_examples,
+)
 
 
 def main():
@@ -27,6 +32,9 @@ def main():
     parser.add_argument("--n_slices", type=int, default=10)
     parser.add_argument("--weight", type=float, default=10.0)
     parser.add_argument("--project", default="synthetic_imagenette")
+    parser.add_argument("--extract_examples", action="store_true", default=True)
+    parser.add_argument("--no_extract", action="store_false", dest="extract_examples")
+    parser.add_argument("--n_examples", type=int, default=5)
     args = parser.parse_args()
 
     # Load YAML config if provided
@@ -85,7 +93,7 @@ def main():
     if np.isnan(df_val["clip(img)"].data).any():
         print("⚠️ Warning: NaNs found in validation embeddings! Filling with 0.")
         df_val["clip(img)"].data = np.nan_to_num(df_val["clip(img)"].data)
-    
+
     if np.isnan(df_test["clip(img)"].data).any():
         print("⚠️ Warning: NaNs found in test embeddings! Filling with 0.")
         df_test["clip(img)"].data = np.nan_to_num(df_test["clip(img)"].data)
@@ -165,15 +173,24 @@ def main():
 
     # Fit on validation data (no peeking at test)
     domino.fit(
-        data=df_val, embeddings="clip(img)", targets="target_onehot", pred_probs="pred_probs"
+        data=df_val,
+        embeddings="clip(img)",
+        targets="target_onehot",
+        pred_probs="pred_probs",
     )
 
     # Predict on both val and test
     df_val["domino_slices"] = domino.predict(
-        data=df_val, embeddings="clip(img)", targets="target_onehot", pred_probs="pred_probs"
+        data=df_val,
+        embeddings="clip(img)",
+        targets="target_onehot",
+        pred_probs="pred_probs",
     )
     df_test["domino_slices"] = domino.predict(
-        data=df_test, embeddings="clip(img)", targets="target_onehot", pred_probs="pred_probs"
+        data=df_test,
+        embeddings="clip(img)",
+        targets="target_onehot",
+        pred_probs="pred_probs",
     )
 
     # Extract hard slice assignments (domino_slices is a soft assignment matrix [n_samples, n_slices])
@@ -262,6 +279,34 @@ def main():
                 "test/accuracy_gap": test_res_df["accuracy"].max()
                 - test_res_df["accuracy"].min(),
             }
+        )
+
+    # --- Integrated Visualization and Extraction ---
+    print("\n=== Generating Integrated Visualizations and Examples ===")
+    plot_dir = os.path.join(PROJECT_ROOT, "results/plots")
+    os.makedirs(plot_dir, exist_ok=True)
+
+    # Paths for plots
+    perf_plot_path = os.path.join(plot_dir, "slice_analysis.png")
+    conc_plot_path = os.path.join(plot_dir, "error_concentration.png")
+
+    # Generate Plots
+    plot_slice_performance(test_res_df, perf_plot_path)
+    plot_error_concentration(test_res_df, conc_plot_path)
+
+    # Extract Examples
+    if args.extract_examples:
+        example_dir = os.path.join(PROJECT_ROOT, "results/slice_examples")
+
+        # Prepare df_test for extraction (add slice assignments and predictions)
+        # We need to make sure df_test is a pandas DataFrame or similar for extract_slice_examples
+        # meerkat DataPanels can be converted to pandas
+        pd_test = df_test.to_pandas()
+        pd_test["domino_slice"] = slice_preds_test
+        pd_test["prediction"] = test_pred_labels
+
+        extract_slice_examples(
+            pd_test, test_res_df, example_dir, n_examples=args.n_examples
         )
 
     wandb.finish()
