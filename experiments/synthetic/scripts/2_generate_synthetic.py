@@ -81,13 +81,20 @@ def main():
 
     # Log stats
     for split, df in [("train", df_train), ("val", df_val), ("test", df_test)]:
-        artifact_rate = df["has_artifact"].mean()
-        print(f"  {split}: {len(df)} images, artifact rate: {artifact_rate:.3f}")
+        hidden_rate = df["has_hidden_artifact"].mean()
+        known_rate = df["has_known_artifact"].mean()
+        print(
+            f"  {split}: {len(df)} images, hidden rate: {hidden_rate:.3f}, known rate: {known_rate:.3f}"
+        )
         if use_wandb:
             import wandb
 
             wandb.log(
-                {f"{split}/size": len(df), f"{split}/artifact_rate": artifact_rate}
+                {
+                    f"{split}/size": len(df),
+                    f"{split}/hidden_rate": hidden_rate,
+                    f"{split}/known_rate": known_rate,
+                }
             )
 
     print("Synthetic dataset generation complete.")

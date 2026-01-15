@@ -88,12 +88,15 @@ def main():
         ]
     )
 
+    # Use both artifacts to track the 4 ground-truth subgroups (None, Hidden, Known, Both)
+    bias_fields = ["has_hidden_artifact", "has_known_artifact"]
+
     train_set = CSVDatasetWithName(
         data_root,
         os.path.join(data_root, "train.csv"),
         "image_path",
         "target",
-        "has_artifact",
+        bias_fields,
         transform=transform,
         verbose=False,
     )
@@ -102,7 +105,7 @@ def main():
         os.path.join(data_root, "val.csv"),
         "image_path",
         "target",
-        "has_artifact",
+        bias_fields,
         transform=transform,
         verbose=False,
     )
@@ -111,7 +114,7 @@ def main():
         os.path.join(data_root, "test.csv"),
         "image_path",
         "target",
-        "has_artifact",
+        bias_fields,
         transform=transform,
         verbose=False,
     )
@@ -299,26 +302,35 @@ def compute_training_distribution_metrics(results, biased_class_idx=0):
     """
     Compute training data distribution metrics to show class-conditional bias.
     Logs per-class artifact rates and artifact-class correlation.
+    Note: groups here are indices (0-3) representing combinations of (Hidden, Known).
+    Mapping (lexicographical): 0:(0,0), 1:(0,1), 2:(1,0), 3:(1,1)
     """
     labels = results["labels"]
-    groups = results["groups"]  # 0 = no artifact, 1 = artifact
+    groups = results["groups"]
 
     metrics = {}
 
-    # Overall artifact prevalence
-    metrics["train/data/artifact_rate"] = groups.mean()
+    # Extract individual artifact flags from group indices
+    # Hidden artifact is present in groups 2 and 3
+    # Known artifact is present in groups 1 and 3
+    has_hidden = np.isin(groups, [2, 3]).astype(float)
+    has_known = np.isin(groups, [1, 3]).astype(float)
 
-    # Per-class artifact rates (shows class-conditional bias explicitly)
-    # Expect ~0.95 for biased class, ~0.05 for others
+    # Overall artifact prevalence
+    metrics["train/data/hidden_artifact_rate"] = has_hidden.mean()
+    metrics["train/data/known_artifact_rate"] = has_known.mean()
+
+    # Per-class artifact rates
     for c in np.unique(labels):
         mask = labels == c
-        metrics[f"train/data/artifact_rate/class_{int(c)}"] = groups[mask].mean()
+        metrics[f"train/data/hidden_rate/class_{int(c)}"] = has_hidden[mask].mean()
+        metrics[f"train/data/known_rate/class_{int(c)}"] = has_known[mask].mean()
 
-    # Artifact–class correlation (summary of shortcut strength)
+    # Correlation (using Hidden as the primary bias for traditional reporting)
     biased_class_mask = labels == biased_class_idx
-    if len(np.unique(groups)) > 1:
-        metrics["train/data/artifact_class_correlation"] = np.corrcoef(
-            groups, biased_class_mask.astype(int)
+    if len(np.unique(has_hidden)) > 1:
+        metrics["train/data/hidden_class_correlation"] = np.corrcoef(
+            has_hidden, biased_class_mask.astype(int)
         )[0, 1]
 
     return metrics
